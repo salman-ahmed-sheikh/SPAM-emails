@@ -1,0 +1,5 @@
+.ipynb_checkpoints/
+.vscode/
+__pycache__/
+raw_DIR/
+data_files_DIR/
