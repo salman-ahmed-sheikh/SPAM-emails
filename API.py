@@ -5,6 +5,7 @@ import pandas as pd
 import numpy as np
 import random
 import pickle 
+import joblib
 from configparser import ConfigParser
 
 from textblob import TextBlob
@@ -34,12 +35,12 @@ class API:
 
     def initialize_API(self):
         print("Checking if Trained Model Available...")
-        if os.path.exists(os.path.join(configuration['DIRECTORIES']['model'],"modelNB.pickle")):
+        if os.path.exists(os.path.join(configuration['DIRECTORIES']['model'],"modelNB.pickle")) and os.path.exists(os.path.join(configuration['DIRECTORIES']['model'],"bow_transformer.pkl")):
             with open('modelNB.pickle', 'rb') as handle:
                 print("Model Found, Loading Model...")
                 self.modelNB = pickle.load(handle)
             return
-        elif os.path.exists(os.path.join(configuration['DIRECTORIES']['files'],"train-features.pickle")) and os.path.exists(os.path.join(configuration['DIRECTORIES']['files'],"train-labels.pickle")) and os.path.exists(os.path.join(configuration['DIRECTORIES']['files'],"test-features.pickle")) and os.path.exists(os.path.join(configuration['DIRECTORIES']['files'],"test-labels.pickle")):
+        elif os.path.exists(os.path.join(configuration['DIRECTORIES']['files'],"train-features.npy")) and os.path.exists(os.path.join(configuration['DIRECTORIES']['files'],"train-labels.npy")) and os.path.exists(os.path.join(configuration['DIRECTORIES']['files'],"test-features.npy")) and os.path.exists(os.path.join(configuration['DIRECTORIES']['files'],"test-labels.npy")):
             print("Processed Data Found, Training Model...")
             
             self.__train()
@@ -50,6 +51,11 @@ class API:
             print("Training Model...")
             self.__train()
     def __train(self):
+        train_x = np.load(os.path.join(configuration['DIRECTORIES']['files'],"train-features.npy"),allow_pickle=True)
+        train_y = np.load(os.path.join(configuration['DIRECTORIES']['files'],"train-labels.npy"),allow_pickle=True)
+        test_x = np.load(os.path.join(configuration['DIRECTORIES']['files'],"test-features.npy"),allow_pickle=True)
+        test_y = np.load(os.path.join(configuration['DIRECTORIES']['files'],"test-labels.npy"),allow_pickle=True)
+        '''
         with open(os.path.join(configuration['DIRECTORIES']['files'],'train-features.pickle'), 'rb') as handle:
             train_x = pickle.load(handle)
         with open(os.path.join(configuration['DIRECTORIES']['files'],'train-labels.pickle'), 'rb') as handle:
@@ -59,13 +65,18 @@ class API:
         with open(os.path.join(configuration['DIRECTORIES']['files'],'test-labels.pickle'), 'rb') as handle:
             test_y = pickle.load(handle)
 
+        '''
+
+
+
+
         train_features = self.__features_transform(train_x)
         test_features = self.__features_transform(test_x)
 
         self.modelNB=MultinomialNB()
         self.modelNB.fit(train_features,train_y)
         predicted_class_NB=self.modelNB.predict(test_features)
-        #self.__model_assessment(test_y,predicted_class_NB)
+        self.__model_assessment(test_y,predicted_class_NB)
         with open(os.path.join(configuration['DIRECTORIES']['model'],'modelNB.pickle'), 'wb') as handle:
             pickle.dump(self.modelNB, handle, protocol=pickle.HIGHEST_PROTOCOL)
         
@@ -136,9 +147,24 @@ class API:
 
         #print(self.train_x)
         print("Storing Data...")
-        with open(os.path.join(configuration['DIRECTORIES']['files'],'train-features.pickle'), 'wb') as handle:
-            pickle.dump(self.train_x, handle, protocol=pickle.HIGHEST_PROTOCOL)
+        np.save(os.path.join(configuration['DIRECTORIES']['files'],'train-features.npy'), self.train_x)
+        #with open(, 'wb') as handle:
+        #    pickle.dump(self.train_x, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
+        np.save(os.path.join(configuration['DIRECTORIES']['files'],'train-labels.npy'), self.train_y)
+
+        np.save(os.path.join(configuration['DIRECTORIES']['files'],'test-features.npy'), self.test_x)
+
+        np.save(os.path.join(configuration['DIRECTORIES']['files'],'test-labels.npy'), self.test_y)
+
+        bow_transformer = CountVectorizer(analyzer=self.split_into_lemmas).fit(self.train_x)
+
+        joblib.dump(bow_transformer, "bow_transformer.pkl")
+        #with open(os.path.join(configuration['DIRECTORIES']['model'],'bow_transformer.pickle'), 'wb') as handle:
+        #    pickle.dump(bow_transformer, handle, protocol=pickle.HIGHEST_PROTOCOL)
+
+        
+        '''
         with open(os.path.join(configuration['DIRECTORIES']['files'],'train-labels.pickle'), 'wb') as handle:
             pickle.dump(self.train_y, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
@@ -147,7 +173,7 @@ class API:
 
         with open(os.path.join(configuration['DIRECTORIES']['files'],'test-labels.pickle'), 'wb') as handle:
             pickle.dump(self.test_y, handle, protocol=pickle.HIGHEST_PROTOCOL)
-
+        '''
 
 
         #np.save("train-features.npy", self.train_x)
@@ -159,18 +185,18 @@ class API:
     
     #function which takes in y test value and y predicted value and prints the associated model performance metrics
     def __model_assessment(self, y_test,predicted_class):
-        print('confusion matrix')
-        print(confusion_matrix(y_test,predicted_class))
+        #print('confusion matrix')
+        #print(confusion_matrix(y_test,predicted_class))
         print('accuracy')
         print(accuracy_score(y_test,predicted_class))
-        print('precision')
-        print(precision_score(y_test,predicted_class,pos_label=1))
-        print('recall')
-        print(recall_score(y_test,predicted_class,pos_label=1))
-        print('f-Score')
-        print(f1_score(y_test,predicted_class,pos_label=1))
-        print('AUC')
-        print(roc_auc_score(np.where(y_test==1,1,0),np.where(predicted_class==1,1,0)))
+        #print('precision')
+        #print(precision_score(y_test,predicted_class,pos_label=1))
+        #print('recall')
+        #print(recall_score(y_test,predicted_class,pos_label=1))
+        #print('f-Score')
+        #print(f1_score(y_test,predicted_class,pos_label=1))
+        #print('AUC')
+        #print(roc_auc_score(np.where(y_test==1,1,0),np.where(predicted_class==1,1,0)))
         #plt.matshow(confusion_matrix(y_test, predicted_class), cmap=plt.cm.binary, interpolation='nearest')
         #plt.title('confusion matrix')
         #plt.colorbar()
@@ -181,10 +207,16 @@ class API:
 
     def __features_transform(self, mail):
         #get the bag of words for the mail text
-        with open(os.path.join(configuration['DIRECTORIES']['files'],'train-features.pickle'), 'rb') as handle:
-            train_x = pickle.load(handle)
+        #with open(os.path.join(configuration['DIRECTORIES']['files'],'train-features.pickle'), 'rb') as handle:
+        #    train_x = pickle.load(handle)
+        #train_x = np.load(os.path.join(configuration['DIRECTORIES']['files'],"train-features.npy"),allow_pickle=True)
         #print(train_x.shape)
-        bow_transformer = CountVectorizer(analyzer=self.__split_into_lemmas).fit(train_x)
+        #bow_transformer = CountVectorizer(analyzer=self.split_into_lemmas).fit(train_x)
+
+        #with open(os.path.join(configuration['DIRECTORIES']['model'],'bow_transformer.pickle'), 'rb') as handle:
+        #        bow_transformer = pickle.load(handle)
+        bow_transformer = joblib.load("bow_transformer.pkl")
+        #bow_transformer = np.load(os.path.join(configuration['DIRECTORIES']['files'],"bow_transformer.npy"),allow_pickle=True)
         #print(len(bow_transformer.vocabulary_))
         messages_bow = bow_transformer.transform(mail)
         #print sparsity value
@@ -199,7 +231,7 @@ class API:
         return messages_tfidf
 
 
-    def __split_into_lemmas(self, message):
+    def split_into_lemmas(self, message):
         #print(type(message))
         #if type(message) is 'str':
         #    message = message.lower()

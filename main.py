@@ -26,13 +26,13 @@ def prediction_api():
         return jsonify({"status": 0, "error": "Admin password missmatch"})
     
     #try:
-    #    message = email.message_from_string(eml)
+    #    message = 
     #except:
-    #message = eml
+    message = email.message_from_string(eml)
 
     #print(message)
 
-    out = api.predict([eml])
+    out = api.predict([message.get_payload()])
     if out[0] == 0:
         return jsonify({"status": 1, "prediction_code": 0, "prediction": "legitimate"})
     else:
